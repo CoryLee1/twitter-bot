@@ -1,6 +1,6 @@
 # Tabii Twitter Bot
 
-Small Python bot that generates short tweets for `@TabiiClean` with a local Ollama model or OpenAI, then posts them through the X API.
+Small Python bot that generates short tweets for `@TabiiClean` with zero-cost templates, local Ollama, or OpenAI, then posts them through the X API.
 
 ## Setup
 
@@ -20,7 +20,7 @@ OAuth 2.0 user context:
 - `TWITTER_CLIENT_SECRET`
 - `TWITTER_ACCESS_TOKEN`
 - `TWITTER_REFRESH_TOKEN`
-- `LLM_PROVIDER=ollama`
+- `LLM_PROVIDER=template`
 
 OAuth 1.0a alternative:
 
@@ -29,9 +29,19 @@ OAuth 1.0a alternative:
 - `TWITTER_API_SECRET`
 - `TWITTER_ACCESS_TOKEN`
 - `TWITTER_ACCESS_TOKEN_SECRET`
-- `LLM_PROVIDER=ollama`
+- `LLM_PROVIDER=template`
 
 For OAuth 2.0, the token needs user-context scopes including `tweet.write`, `tweet.read`, `users.read`, and `offline.access`. The script refreshes the access token before posting and writes rotated tokens back to `.env`.
+
+## Zero-Cost Mode
+
+If you do not want any paid AI API, use template mode:
+
+```bash
+LLM_PROVIDER=template
+```
+
+This uses hand-written Tabii/X meme templates, then still applies the same topic, trend keyword, hashtag, and CTA strategy. It works well for cheap VPS, cron, or GitHub Actions because it does not need OpenAI or Ollama.
 
 ## Local Llama With Ollama
 
@@ -63,6 +73,21 @@ LLM_PROVIDER=openai
 OPENAI_API_KEY=your_openai_api_key
 OPENAI_MODEL=gpt-4o-mini
 ```
+
+## Free GitHub Actions Deployment
+
+The repo includes `.github/workflows/post-tweet.yml`, which runs three times a day using GitHub's scheduled workflows and `LLM_PROVIDER=template`.
+
+For GitHub Actions, OAuth 1.0a is recommended because those tokens do not rotate. Add these repository secrets in GitHub:
+
+- `TWITTER_API_KEY`
+- `TWITTER_API_SECRET`
+- `TWITTER_ACCESS_TOKEN`
+- `TWITTER_ACCESS_TOKEN_SECRET`
+
+Then the workflow will run automatically at UTC times equivalent to `00:30`, `08:30`, and `21:30` in UTC+8.
+
+OAuth 2.0 is better for a VPS or local always-on machine, because refresh tokens may rotate and the updated `.env` needs to persist between runs.
 
 ## Run Once
 
@@ -125,7 +150,11 @@ X_TRENDS_WOEID=1
 
 ## Run Scheduler
 
-By default it posts at `09:00`, `14:00`, and `20:00` every day:
+By default it posts three times a day in your machine's local timezone. For a UTC+8 machine, this schedule is tuned to hit US X traffic peaks:
+
+- `00:30` UTC+8: US midday/morning
+- `08:30` UTC+8: US evening
+- `21:30` UTC+8: US morning
 
 ```bash
 python post_tweet.py
@@ -134,12 +163,12 @@ python post_tweet.py
 Customize the schedule and topics in `.env`:
 
 ```bash
-POST_TIMES=09:00,14:00,20:00
+POST_TIMES=00:30,08:30,21:30
 TWEET_TOPICS=bookmark organization tip,tab management productivity,visual bookmarking workflow
 ```
 
 ## Cron Example
 
 ```cron
-0 9,14,20 * * * cd /path/to/Tabii-twitterbot && /path/to/Tabii-twitterbot/.venv/bin/python post_tweet.py --once
+30 0,8,21 * * * cd /path/to/Tabii-twitterbot && /path/to/Tabii-twitterbot/.venv/bin/python post_tweet.py --once
 ```

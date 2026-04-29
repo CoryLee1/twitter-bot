@@ -1,4 +1,6 @@
+import json
 import os
+import random
 from typing import Protocol
 
 import requests
@@ -58,11 +60,53 @@ class OllamaTextGenerator:
         return response.json().get("response", "")
 
 
+class TemplateTextGenerator:
+    def generate(self, prompt: str) -> str:
+        templates = [
+            (
+                "My toxic trait is keeping 47 tabs open because each one represents "
+                "a different version of who I might become."
+            ),
+            (
+                "POV: you opened one article for research and now Chrome looks like "
+                "a final boss health bar."
+            ),
+            (
+                "If your browser tabs have started forming a society, it might be "
+                "time to let Leo clean them up."
+            ),
+            (
+                "Everyone talks about optimizing workflows, but the real boss fight "
+                "is finding that one tab from yesterday."
+            ),
+            (
+                "A tiny elephant that turns tab chaos into a visual board should not "
+                "make this much sense, but here we are."
+            ),
+            (
+                "Your bookmarks should feel more like an inspiration wall and less "
+                "like a filing cabinet nobody wants to open."
+            ),
+        ]
+        random.shuffle(templates)
+        candidates = [
+            {
+                "text": text,
+                "score": 8 + (index % 2),
+                "rationale": "Template mode: no paid AI API required.",
+            }
+            for index, text in enumerate(templates[:3])
+        ]
+        return json.dumps({"candidates": candidates})
+
+
 def build_text_generator() -> TextGenerator:
     provider = os.getenv("LLM_PROVIDER", "ollama").lower()
     if provider == "openai":
         return OpenAITextGenerator()
     if provider == "ollama":
         return OllamaTextGenerator()
+    if provider == "template":
+        return TemplateTextGenerator()
 
-    raise RuntimeError("LLM_PROVIDER must be either ollama or openai")
+    raise RuntimeError("LLM_PROVIDER must be template, ollama, or openai")
