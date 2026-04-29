@@ -1,6 +1,6 @@
 # Tabii Twitter Bot
 
-Small Python bot that generates short tweets for `@TabiiClean` with zero-cost templates, local Ollama, or OpenAI, then posts them through the X API.
+Small Python bot that generates short tweets for `@TabiiClean` with zero-cost templates, Doubao/Ark, local Ollama, or OpenAI, then posts them through the X API.
 
 ## Setup
 
@@ -42,6 +42,19 @@ LLM_PROVIDER=template
 ```
 
 This uses hand-written Tabii/X meme templates, then still applies the same topic, trend keyword, hashtag, and CTA strategy. It works well for cheap VPS, cron, or GitHub Actions because it does not need OpenAI or Ollama.
+
+## Doubao / Ark
+
+Doubao is supported through Volcengine Ark's Responses API:
+
+```bash
+LLM_PROVIDER=doubao
+ARK_API_KEY=your_ark_api_key
+ARK_MODEL=doubao-seed-2-0-pro-260215
+ARK_BASE_URL=https://ark.cn-beijing.volces.com/api/v3/responses
+```
+
+The bot prompt asks for native English X/Twitter posts, so Doubao will generate English tweet candidates.
 
 ## Local Llama With Ollama
 

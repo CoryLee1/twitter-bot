@@ -60,6 +60,73 @@ class OllamaTextGenerator:
         return response.json().get("response", "")
 
 
+class DoubaoTextGenerator:
+    def __init__(self) -> None:
+        self.api_key = required_env("ARK_API_KEY")
+        self.base_url = os.getenv(
+            "ARK_BASE_URL",
+            "https://ark.cn-beijing.volces.com/api/v3/responses",
+        )
+        self.model = os.getenv("ARK_MODEL", "doubao-seed-2-0-pro-260215")
+
+    def generate(self, prompt: str) -> str:
+        response = requests.post(
+            self.base_url,
+            headers={
+                "Authorization": f"Bearer {self.api_key}",
+                "Content-Type": "application/json",
+            },
+            json={
+                "model": self.model,
+                "input": [
+                    {
+                        "role": "user",
+                        "content": [
+                            {
+                                "type": "input_text",
+                                "text": prompt,
+                            }
+                        ],
+                    }
+                ],
+            },
+            timeout=120,
+        )
+        raise_for_status(response, "Doubao Ark")
+        return extract_responses_text(response.json())
+
+
+def extract_responses_text(payload: dict) -> str:
+    output_text = payload.get("output_text")
+    if isinstance(output_text, str):
+        return output_text
+
+    output = payload.get("output")
+    if isinstance(output, list):
+        texts: list[str] = []
+        for item in output:
+            content = item.get("content") if isinstance(item, dict) else None
+            if not isinstance(content, list):
+                continue
+            for part in content:
+                if not isinstance(part, dict):
+                    continue
+                text = part.get("text")
+                if isinstance(text, str):
+                    texts.append(text)
+        if texts:
+            return "\n".join(texts)
+
+    choices = payload.get("choices")
+    if isinstance(choices, list) and choices:
+        message = choices[0].get("message", {})
+        content = message.get("content")
+        if isinstance(content, str):
+            return content
+
+    raise RuntimeError("Doubao Ark returned no text output.")
+
+
 class TemplateTextGenerator:
     def generate(self, prompt: str) -> str:
         templates = [
@@ -106,7 +173,9 @@ def build_text_generator() -> TextGenerator:
         return OpenAITextGenerator()
     if provider == "ollama":
         return OllamaTextGenerator()
+    if provider in {"doubao", "ark"}:
+        return DoubaoTextGenerator()
     if provider == "template":
         return TemplateTextGenerator()
 
-    raise RuntimeError("LLM_PROVIDER must be template, ollama, or openai")
+    raise RuntimeError("LLM_PROVIDER must be template, doubao, ollama, or openai")
