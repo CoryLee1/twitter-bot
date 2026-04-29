@@ -1,0 +1,5 @@
+tweepy
+openai
+schedule
+python-dotenv
+requests
