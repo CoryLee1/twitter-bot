@@ -102,6 +102,37 @@ Then the workflow will run automatically at UTC times equivalent to `00:30`, `08
 
 OAuth 2.0 is better for a VPS or local always-on machine, because refresh tokens may rotate and the updated `.env` needs to persist between runs.
 
+## Render Deployment
+
+The repo includes `render.yaml` for a Render Background Worker. It runs:
+
+```bash
+python post_tweet.py
+```
+
+This keeps the bot process alive and lets the internal scheduler post at:
+
+```bash
+POST_TIMES=00:30,08:30,21:30
+```
+
+The Render Blueprint asks you to fill these secret values in the dashboard:
+
+- `TWITTER_CLIENT_ID`
+- `TWITTER_CLIENT_SECRET`
+- `TWITTER_ACCESS_TOKEN`
+- `TWITTER_REFRESH_TOKEN`
+- `ARK_API_KEY`
+
+The default Render config uses:
+
+```bash
+TWITTER_AUTH_MODE=oauth2
+LLM_PROVIDER=doubao
+```
+
+Note: OAuth 2.0 refresh tokens can rotate. A long-running Render worker is acceptable, but a restart may require updating `TWITTER_REFRESH_TOKEN` in Render if X invalidates the old token. OAuth 1.0a is still the most stable choice for stateless cron-style deployments.
+
 ## Run Once
 
 Useful for testing or cron:

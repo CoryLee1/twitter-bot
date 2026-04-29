@@ -312,8 +312,30 @@ def remove_urls(text: str) -> str:
 def clean_tweet_text(text: str) -> str:
     tweet = text.strip().strip('"')
     if len(tweet) > 280:
-        tweet = tweet[:277].rstrip() + "..."
+        tweet = tweet[:280].rstrip()
     return tweet
+
+
+def trim_body_for_suffix(body: str, suffix: str) -> str:
+    max_body_length = 280 - len(suffix) - (1 if suffix else 0)
+    body = body.strip()
+    if len(body) <= max_body_length:
+        return body
+
+    truncated = body[:max_body_length].rstrip()
+    sentence_end = max(
+        truncated.rfind("."),
+        truncated.rfind("!"),
+        truncated.rfind("?"),
+    )
+    if sentence_end >= 80:
+        return truncated[: sentence_end + 1].strip()
+
+    word_end = truncated.rfind(" ")
+    if word_end >= 80:
+        return truncated[:word_end].strip()
+
+    return truncated
 
 
 def format_tweet_text(text: str, plan: TweetPlan) -> str:
@@ -325,6 +347,7 @@ def format_tweet_text(text: str, plan: TweetPlan) -> str:
         suffix_parts.append(plan.cta_url)
 
     suffix = " ".join(suffix_parts)
+    tweet = trim_body_for_suffix(tweet, suffix)
     if suffix:
         tweet = f"{tweet} {suffix}"
 

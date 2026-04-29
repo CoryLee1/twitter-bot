@@ -1,0 +1,35 @@
+services:
+  - type: worker
+    name: tabii-twitter-bot
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python post_tweet.py
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: TWITTER_AUTH_MODE
+        value: oauth2
+      - key: TWITTER_CLIENT_ID
+        sync: false
+      - key: TWITTER_CLIENT_SECRET
+        sync: false
+      - key: TWITTER_ACCESS_TOKEN
+        sync: false
+      - key: TWITTER_REFRESH_TOKEN
+        sync: false
+      - key: LLM_PROVIDER
+        value: doubao
+      - key: ARK_API_KEY
+        sync: false
+      - key: ARK_MODEL
+        value: doubao-seed-2-0-pro-260215
+      - key: ARK_BASE_URL
+        value: https://ark.cn-beijing.volces.com/api/v3/responses
+      - key: POST_TIMES
+        value: 00:30,08:30,21:30
+      - key: TWEET_TOPICS
+        value: too many browser tabs,I'll read this later,research rabbit hole,ADHD browser chaos,designer inspiration hoarding,student research panic,AI workflow but messy browser,Chrome eating memory
+      - key: TREND_KEYWORDS
+        value: AI workflow,deadline panic,study setup,designer problems,procrastination,Chrome tabs,research rabbit hole,too many tabs
+      - key: ENABLE_X_TRENDS
+        value: "false"
