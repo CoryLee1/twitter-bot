@@ -468,6 +468,11 @@ def build_image_generation_prompt(plan: TweetPlan) -> str:
         else "Do not put any URL in the main tweet."
     )
     hashtags = " ".join(plan.hashtags)
+    snippet_block = (
+        "Optional real-vibe hints:\n" + plan.trend_search_snippets
+        if plan.trend_search_snippets
+        else ""
+    )
     return f"""
 You caption a viral X/Twitter post that includes an attached image (you can see it).
 
@@ -483,7 +488,7 @@ Angle seed (optional): {plan.angle}
 
 Trending snapshot (names only; you may deviate if the chosen hook is stronger):
 {plan.trend_snapshot}
-{f"Optional real-vibe hints:\\n{plan.trend_search_snippets}" if plan.trend_search_snippets else ""}
+{snippet_block}
 
 Hard requirement: a reader scrolling the For You feed must sense this belongs to *today's*
 public conversation (newsjacking / meme lane), not evergreen marketing.
@@ -547,6 +552,12 @@ def build_generation_prompt(plan: TweetPlan) -> str:
         else "Do not include a URL in the main tweet."
     )
     hashtags = " ".join(plan.hashtags)
+    snippet_block = (
+        "Optional live-vibe hints (paraphrase only, never quote):\n"
+        + plan.trend_search_snippets
+        if plan.trend_search_snippets
+        else ""
+    )
     return f"""
 You write high-performing X/Twitter posts for @TabiiClean.
 
@@ -560,7 +571,7 @@ Required hashtags: {hashtags}
 
 Trending snapshot (prefer staying inside this cultural weather; names only):
 {plan.trend_snapshot}
-{f"Optional live-vibe hints (paraphrase only, never quote):\\n{plan.trend_search_snippets}" if plan.trend_search_snippets else ""}
+{snippet_block}
 
 Write 3 candidate tweets that feel native to X: funny, relatable, slightly playful, not corporate.
 Ground at least one specific cue (language, grievance, or joke format) in the primary trend lane
