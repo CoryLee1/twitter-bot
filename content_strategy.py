@@ -598,13 +598,38 @@ Return JSON only in this shape:
 """.strip()
 
 
-def parse_candidates(raw_text: str, plan: TweetPlan) -> list[GeneratedTweet]:
-    cleaned = raw_text.strip()
-    if cleaned.startswith("```"):
-        cleaned = cleaned.strip("`")
-        cleaned = cleaned.removeprefix("json").strip()
+def _strip_markdown_code_fence(text: str) -> str:
+    """Remove optional ```json ... ``` wrapper from model output."""
+    stripped = text.strip()
+    if not stripped.startswith("```"):
+        return stripped
+    lines = stripped.splitlines()
+    if lines and lines[0].startswith("```"):
+        lines = lines[1:]
+    if lines and lines[-1].strip() == "```":
+        lines = lines[:-1]
+    return "\n".join(lines).strip()
 
-    data = json.loads(cleaned)
+
+def extract_first_json_object(raw_text: str) -> dict:
+    """
+    Models often append prose after JSON (or add two JSON blobs). Parse only the
+    first top-level object using ``raw_decode`` so trailing text does not error.
+    """
+    cleaned = _strip_markdown_code_fence(raw_text)
+    start = cleaned.find("{")
+    if start < 0:
+        raise json.JSONDecodeError("No JSON object start", cleaned, 0)
+
+    decoder = json.JSONDecoder()
+    obj, _end = decoder.raw_decode(cleaned[start:])
+    if not isinstance(obj, dict):
+        raise json.JSONDecodeError("Expected a JSON object", cleaned, start)
+    return obj
+
+
+def parse_candidates(raw_text: str, plan: TweetPlan) -> list[GeneratedTweet]:
+    data = extract_first_json_object(raw_text)
     candidates = data.get("candidates", [])
     generated: list[GeneratedTweet] = []
     for candidate in candidates:
