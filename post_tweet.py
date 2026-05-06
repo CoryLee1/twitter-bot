@@ -1,7 +1,7 @@
 import argparse
 import json
-import os
 import time
+from dataclasses import replace
 
 import schedule
 from dotenv import load_dotenv
@@ -9,6 +9,8 @@ from dotenv import load_dotenv
 from content_strategy import (
     GeneratedTweet,
     build_generation_prompt,
+    build_image_generation_prompt,
+    build_image_tweet_plan,
     build_tweet_plan,
     choose_best_candidate,
     fallback_tweet,
@@ -16,6 +18,7 @@ from content_strategy import (
 )
 from env_utils import env_list
 from llm_clients import TextGenerator, build_text_generator
+from socialmedia_pic import list_social_images, pick_social_image, social_image_posts_enabled
 from twitter_posters import TwitterPoster, build_twitter_poster
 
 
@@ -23,6 +26,24 @@ DOTENV_PATH = ".env"
 
 
 def generate_tweet(generator: TextGenerator) -> GeneratedTweet:
+    if social_image_posts_enabled():
+        image_path = pick_social_image()
+        gen_mm = getattr(generator, "generate_with_image", None)
+        if image_path is not None and callable(gen_mm):
+            plan = build_image_tweet_plan()
+            prompt = build_image_generation_prompt(plan)
+            try:
+                raw_response = gen_mm(prompt, str(image_path))
+                candidates = parse_candidates(raw_response, plan)
+                best = choose_best_candidate(candidates, plan)
+                return replace(best, media_path=str(image_path))
+            except Exception as error:
+                print(f"Image+LLM tweet failed, falling back to text-only: {error}")
+        elif image_path is not None:
+            print("Image posts need LLM_PROVIDER=doubao (vision). Text-only this run.")
+        elif not list_social_images():
+            print("ENABLE_SOCIALMEDIA_PIC is set but socialmedia-pic has no images; text-only.")
+
     plan = build_tweet_plan()
     prompt = build_generation_prompt(plan)
 
@@ -47,19 +68,28 @@ def print_preview(tweet: GeneratedTweet) -> None:
         "hashtags": plan.hashtags,
         "cta_mode": plan.cta_mode,
         "cta_url": plan.cta_url,
+        "trend_snapshot": (plan.trend_snapshot[:500] + "…")
+        if len(plan.trend_snapshot) > 500
+        else plan.trend_snapshot,
+        "trend_search_snippets": (plan.trend_search_snippets[:400] + "…")
+        if len(plan.trend_search_snippets) > 400
+        else plan.trend_search_snippets,
         "score": tweet.score,
         "rationale": tweet.rationale,
+        "media_path": tweet.media_path,
     }
     print(json.dumps(preview, ensure_ascii=False, indent=2))
 
 
 def post_generated_tweet(twitter_poster: TwitterPoster, tweet: GeneratedTweet) -> str:
-    tweet_id = twitter_poster.post(tweet.text)
+    tweet_id = twitter_poster.post(tweet.text, media_path=tweet.media_path)
     print(f"Tweet posted: {tweet_id}")
     print(tweet.text)
 
     if tweet.plan.reply_text:
-        reply_id = twitter_poster.post(tweet.plan.reply_text, reply_to_id=tweet_id)
+        reply_id = twitter_poster.post(
+            tweet.plan.reply_text, reply_to_id=tweet_id, media_path=None
+        )
         print(f"CTA reply posted: {reply_id}")
         print(tweet.plan.reply_text)
 

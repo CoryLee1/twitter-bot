@@ -8,6 +8,7 @@ from openai import OpenAI
 
 from env_utils import required_env
 from http_utils import raise_for_status
+from socialmedia_pic import image_file_to_data_url
 
 
 class TextGenerator(Protocol):
@@ -68,6 +69,10 @@ class DoubaoTextGenerator:
             "https://ark.cn-beijing.volces.com/api/v3/responses",
         )
         self.model = os.getenv("ARK_MODEL", "doubao-seed-2-0-pro-260215")
+        self.vision_model = os.getenv(
+            "ARK_VISION_MODEL",
+            "doubao-seed-1-6-flash-250828",
+        )
 
     def generate(self, prompt: str) -> str:
         response = requests.post(
@@ -93,6 +98,38 @@ class DoubaoTextGenerator:
             timeout=120,
         )
         raise_for_status(response, "Doubao Ark")
+        return extract_responses_text(response.json())
+
+    def generate_with_image(self, prompt: str, image_path: str) -> str:
+        model = self.vision_model
+        data_url = image_file_to_data_url(image_path)
+        response = requests.post(
+            self.base_url,
+            headers={
+                "Authorization": f"Bearer {self.api_key}",
+                "Content-Type": "application/json",
+            },
+            json={
+                "model": model,
+                "input": [
+                    {
+                        "role": "user",
+                        "content": [
+                            {
+                                "type": "input_image",
+                                "image_url": data_url,
+                            },
+                            {
+                                "type": "input_text",
+                                "text": prompt,
+                            },
+                        ],
+                    }
+                ],
+            },
+            timeout=120,
+        )
+        raise_for_status(response, "Doubao Ark vision")
         return extract_responses_text(response.json())
 
 
